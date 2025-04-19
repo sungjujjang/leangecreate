@@ -1,14 +1,16 @@
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session, flash, send_file
 import datetime
 
+
+
 class Interpreter:
-    def __init__(self, valuecreate, printtext, getvalues, extension):
+    def __init__(self, valuecreate, printtext, getvalue, extension):
         self.values = {}
         self.valuecreate = valuecreate
         self.printtext = printtext
-        self.getvalues = getvalues
+        self.getvalue_command = getvalue
         self.extension = extension
-        
+
         self.results = []
         
     def createvalue(self, name, value):
@@ -16,7 +18,7 @@ class Interpreter:
     
     def checkgetvalue(self, commands):
         for i, command in enumerate(commands):
-            if command.startswith(self.getvalues):
+            if command.startswith(self.getvalue_command):
                 valuename = commands[i+1]
                 return valuename
         return None
@@ -26,23 +28,29 @@ class Interpreter:
             return self.values[name]
         else:
             return None
-    
+        
     def getresults(self):
         return "\n".join([str(result) for result in self.results])
-
+    
     def process_line(self, line):
         try:
             if line.startswith(self.valuecreate):
                 valuename = self.checkgetvalue(line.split())
                 if valuename:
-                    texts = ' '.join(line.split()[1:]).replace(f"{self.getvalues} {valuename}", f"{str(self.getvalue(valuename))}") # 우흥 변수이름 값
+                    if type(self.getvalue(valuename)) == str:
+                        texts = ' '.join(line.split()[2:]).replace(f"{self.getvalue_command} {valuename}", f"\"{str(self.getvalue(valuename))}\"") # 우흥 변수이름 값
+                    else:
+                        texts = ' '.join(line.split()[2:]).replace(f"{self.getvalue_command} {valuename}", f"{str(self.getvalue(valuename))}")
                     while True:
                         valuename = self.checkgetvalue(texts.split())
                         if valuename:
-                            texts = ' '.join(texts.split()).replace(f"{self.getvalues} {valuename}", f"{str(self.getvalue(valuename))}")
+                            if type(self.getvalue(valuename)) == str:
+                                texts = ' '.join(texts.split()).replace(f"{self.getvalue_command} {valuename}", f"\"{str(self.getvalue(valuename))}\"")
+                            else:
+                                texts = ' '.join(texts.split()).replace(f"{self.getvalue_command} {valuename}", f"{str(self.getvalue(valuename))}")
                         else:
                             break
-                    self.createvalue(line.split()[1], eval(f"'{texts}'"))
+                    self.createvalue(line.split()[1], eval(f"{texts}"))
                 else:
                     texts = ' '.join(line.split()[2:])
                     self.createvalue(line.split()[1], eval(texts))
@@ -50,21 +58,27 @@ class Interpreter:
                 valuename = self.checkgetvalue(line.split())
                 if valuename:
                     if type(self.getvalue(valuename)) == str:
-                        texts = ' '.join(line.split()[1:]).replace(f"{self.getvalues} {valuename}", f"\"{str(self.getvalue(valuename))}\"")
+                        texts = ' '.join(line.split()[1:]).replace(f"{self.getvalue_command} {valuename}", f"\"{str(self.getvalue(valuename))}\"")
                         while True:
                             valuename = self.checkgetvalue(texts.split())
                             if valuename:
-                                texts = ' '.join(texts.split()).replace(f"{self.getvalues} {valuename}", f"\"{str(self.getvalue(valuename))}\"")
+                                texts = ' '.join(texts.split()).replace(f"{self.getvalue_command} {valuename}", f"\"{str(self.getvalue(valuename))}\"")
                                 texts = texts.replace("'", "\"")
                             else:
                                 break
                     else:
-                        texts = ' '.join(line.split()[1:]).replace(f"{self.getvalues} {valuename}", f"{str(self.getvalue(valuename))}") # 우흥 변수이름 값
+                        texts = ' '.join(line.split()[1:]).replace(f"{self.getvalue_command} {valuename}", f"{str(self.getvalue(valuename))}") # 우흥 변수이름 값
+                        while True:
+                            valuename = self.checkgetvalue(texts.split())
+                            if valuename:
+                                texts = ' '.join(texts.split()).replace(f"{self.getvalue_command} {valuename}", f"{str(self.getvalue(valuename))}")
+                            else:
+                                break
                     self.results.append(eval(f"{texts}"))
                 else:
                     texts = ' '.join(line.split()[1:])
                     texts = texts.replace("'", "\"")
-                    self.results.append(eval(f"{texts}"))
+                    self.results.append(eval(f"'{texts}'"))
             else:
                 raise ValueError("Unknown command")
         except Exception as e:
@@ -95,9 +109,9 @@ def dwn():
     result = None
     request_ip = request.remote_addr
     if request.method == 'POST':
-        print_func = request.form.get('print-func')
-        var_create_func = request.form.get('var-create-func')
-        var_get_func = request.form.get('var-get-func')
+        print_func = request.form.get('print_func')
+        var_create_func = request.form.get('var_create_func')
+        var_get_func = request.form.get('var_get_func')
         extension = request.form.get('extension')
         print(f"print_func: {print_func}, var_create_func: {var_create_func}, var_get_func: {var_get_func}, extension: {extension}")
         if extension.startswith('.'):
@@ -136,11 +150,14 @@ def test():
         printtext = json_data.get('print_func', '출력')
         getvalue = json_data.get('var_get_func', '변가')
         extension = json_data.get('extension', '.asdf')
+        
                 
         interpreter = Interpreter(valuecreate, printtext, getvalue, extension)
         
         try:
             for line in code.split('\n'):
+                if not line.strip():
+                    continue
                 interpreter.process_line(line.strip())
             result = interpreter.getresults()
             return jsonify({'result': result})

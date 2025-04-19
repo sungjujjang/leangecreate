@@ -3,7 +3,7 @@ import sys
 valuecreate = "변생"
 printtext = "출력"
 getvalue = "변가"
-extension = ".nomu"
+extension = ".asdf"
 
 class Interpreter:
     def __init__(self):
@@ -30,14 +30,20 @@ class Interpreter:
             if line.startswith(valuecreate):
                 valuename = self.checkgetvalue(line.split())
                 if valuename:
-                    texts = ' '.join(line.split()[1:]).replace(f"{getvalue} {valuename}", f"{str(self.getvalue(valuename))}") # 우흥 변수이름 값
+                    if type(self.getvalue(valuename)) == str:
+                        texts = ' '.join(line.split()[2:]).replace(f"{getvalue} {valuename}", f"\"{str(self.getvalue(valuename))}\"") # 우흥 변수이름 값
+                    else:
+                        texts = ' '.join(line.split()[2:]).replace(f"{getvalue} {valuename}", f"{str(self.getvalue(valuename))}")
                     while True:
                         valuename = self.checkgetvalue(texts.split())
                         if valuename:
-                            texts = ' '.join(texts.split()).replace(f"{getvalue} {valuename}", f"{str(self.getvalue(valuename))}")
+                            if type(self.getvalue(valuename)) == str:
+                                texts = ' '.join(texts.split()).replace(f"{getvalue} {valuename}", f"\"{str(self.getvalue(valuename))}\"")
+                            else:
+                                texts = ' '.join(texts.split()).replace(f"{getvalue} {valuename}", f"{str(self.getvalue(valuename))}")
                         else:
                             break
-                    self.createvalue(line.split()[1], eval(f"'{texts}'"))
+                    self.createvalue(line.split()[1], eval(f"{texts}"))
                 else:
                     texts = ' '.join(line.split()[2:])
                     self.createvalue(line.split()[1], eval(texts))
@@ -55,6 +61,12 @@ class Interpreter:
                                 break
                     else:
                         texts = ' '.join(line.split()[1:]).replace(f"{getvalue} {valuename}", f"{str(self.getvalue(valuename))}") # 우흥 변수이름 값
+                        while True:
+                            valuename = self.checkgetvalue(texts.split())
+                            if valuename:
+                                texts = ' '.join(texts.split()).replace(f"{getvalue} {valuename}", f"{str(self.getvalue(valuename))}")
+                            else:
+                                break
                     print(eval(f"{texts}"))
                 else:
                     texts = ' '.join(line.split()[1:])
