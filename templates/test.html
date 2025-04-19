@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interpreter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .code-area {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #f3f4f6;
+            border: 1px solid #d1d5db;
+            padding: 10px;
+            border-radius: 5px;
+            resize: none;
+        }
+        .result-area {
+            background-color: #f9fafb;
+            border: 1px solid #d1d5db;
+            padding: 10px;
+            border-radius: 5px;
+            min-height: 100px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white shadow-md rounded-lg p-6 w-full max-w-md">
+        <h1 class="text-xl font-bold mb-4">Interpreter</h1>
+        <textarea class="code-area w-full h-40 mb-4" id="txt" placeholder="Write your code here..."></textarea>
+        <div class="flex items-center mb-4">
+            <button id="runButton" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Run</button>
+        </div>
+        <h2 class="text-lg font-semibold mb-2">Result</h2>
+        <div id="result" class="result-area"></div>
+    </div>
+
+    <script type="module">
+      document.getElementById('runButton').addEventListener('click', async () => {
+        const code = document.getElementById('txt').value;
+        const resultArea = document.getElementById('result');
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const query = urlParams.get('query');
+        const notbase64_query = decodeURIComponent(escape(atob(query)));
+        console.log(notbase64_query);
+        
+        const spiltquery = notbase64_query.split('|');
+
+        const printFunc = spiltquery[0];
+        const varCreateFunc = spiltquery[1];
+        const varGetFunc = spiltquery[2];
+        const extension = spiltquery[3];
+
+        console.log(printFunc, varCreateFunc, varGetFunc, extension);
+
+        try {
+            const response = await fetch('/test', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    code: code,
+                    print_func: printFunc,
+                    var_create_func: varCreateFunc,
+                    var_get_func: varGetFunc,
+                    extension: extension
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                resultArea.textContent = 'Error: ' + data.error;
+            } else {
+                resultArea.textContent = data.result;
+            }
+        } catch (error) {
+            resultArea.textContent = 'Error: ' + error.message;
+        }
+    });    
+    </script>
+</body>
+</html>

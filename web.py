@@ -1,6 +1,75 @@
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session, flash, send_file
 import datetime
 
+class Interpreter:
+    def __init__(self, valuecreate, printtext, getvalues, extension):
+        self.values = {}
+        self.valuecreate = valuecreate
+        self.printtext = printtext
+        self.getvalues = getvalues
+        self.extension = extension
+        
+        self.results = []
+        
+    def createvalue(self, name, value):
+        self.values[name] = value
+    
+    def checkgetvalue(self, commands):
+        for i, command in enumerate(commands):
+            if command.startswith(self.getvalues):
+                valuename = commands[i+1]
+                return valuename
+        return None
+    
+    def getvalue(self, name):
+        if name in self.values:
+            return self.values[name]
+        else:
+            return None
+    
+    def getresults(self):
+        return "\n".join([str(result) for result in self.results])
+
+    def process_line(self, line):
+        try:
+            if line.startswith(self.valuecreate):
+                valuename = self.checkgetvalue(line.split())
+                if valuename:
+                    texts = ' '.join(line.split()[1:]).replace(f"{self.getvalues} {valuename}", f"{str(self.getvalue(valuename))}") # 우흥 변수이름 값
+                    while True:
+                        valuename = self.checkgetvalue(texts.split())
+                        if valuename:
+                            texts = ' '.join(texts.split()).replace(f"{self.getvalues} {valuename}", f"{str(self.getvalue(valuename))}")
+                        else:
+                            break
+                    self.createvalue(line.split()[1], eval(f"'{texts}'"))
+                else:
+                    texts = ' '.join(line.split()[2:])
+                    self.createvalue(line.split()[1], eval(texts))
+            elif line.startswith(self.printtext):
+                valuename = self.checkgetvalue(line.split())
+                if valuename:
+                    if type(self.getvalue(valuename)) == str:
+                        texts = ' '.join(line.split()[1:]).replace(f"{self.getvalues} {valuename}", f"\"{str(self.getvalue(valuename))}\"")
+                        while True:
+                            valuename = self.checkgetvalue(texts.split())
+                            if valuename:
+                                texts = ' '.join(texts.split()).replace(f"{self.getvalues} {valuename}", f"\"{str(self.getvalue(valuename))}\"")
+                                texts = texts.replace("'", "\"")
+                            else:
+                                break
+                    else:
+                        texts = ' '.join(line.split()[1:]).replace(f"{self.getvalues} {valuename}", f"{str(self.getvalue(valuename))}") # 우흥 변수이름 값
+                    self.results.append(eval(f"{texts}"))
+                else:
+                    texts = ' '.join(line.split()[1:])
+                    texts = texts.replace("'", "\"")
+                    self.results.append(eval(f"{texts}"))
+            else:
+                raise ValueError("Unknown command")
+        except Exception as e:
+            raise ValueError(f"Error processing {line} : {e}")
+
 app = Flask(__name__)
 
 @app.route('/')
@@ -57,5 +126,34 @@ def dwn():
     else:
         return jsonify({'error': 'Invalid request method'}), 400
 
+@app.route('/test', methods=['GET', 'POST'])
+def test():
+    if request.method == 'POST':
+        json_data = request.get_json()
+        print(json_data)
+        code = json_data.get('code', '')
+        valuecreate = json_data.get('var_create_func', '변생')
+        printtext = json_data.get('print_func', '출력')
+        getvalue = json_data.get('var_get_func', '변가')
+        extension = json_data.get('extension', '.asdf')
+                
+        interpreter = Interpreter(valuecreate, printtext, getvalue, extension)
+        
+        try:
+            for line in code.split('\n'):
+                interpreter.process_line(line.strip())
+            result = interpreter.getresults()
+            return jsonify({'result': result})
+        except Exception as e:
+            return jsonify({'result': str(e)})
+    else:
+        # get url query string
+        valuecreate = request.args.get('var-create-func', '변생')
+        printtext = request.args.get('print-func', '출력')
+        getvalue = request.args.get('var-get-func', '변가')
+        extension = request.args.get('extension', '.asdf')
+        
+        return render_template('test.html', valuecreate=valuecreate, printtext=printtext, getvalue=getvalue, extension=extension)
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=9876 ,debug=True)

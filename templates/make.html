@@ -78,20 +78,22 @@
   <h1>프로그래밍 언어 생성기</h1>
   
   <form action="/download" method="POST">
-    <label for="print-func">출력함수:</label>
-    <input type="text" id="print-func" name="print-func" placeholder="출력함수 입력">
+    <label for="print_func">출력함수:</label>
+    <input type="text" id="print_func" name="print_func" placeholder="출력함수 입력">
 
-    <label for="var-create-func">변수 생성 함수:</label>
-    <input type="text" id="var-create-func" name="var-create-func" placeholder="변수 생성 함수 입력">
+    <label for="var_create_func">변수 생성 함수:</label>
+    <input type="text" id="var_create_func" name="var_create_func" placeholder="변수 생성 함수 입력">
 
-    <label for="var-get-func">변수 가져오기 함수:</label>
-    <input type="text" id="var-get-func" name="var-get-func" placeholder="변수 가져오기 함수 입력">
+    <label for="var_get_func">변수 가져오기 함수:</label>
+    <input type="text" id="var_get_func" name="var_get_func" placeholder="변수 가져오기 함수 입력">
 
     <label for="extension">확장자:</label>
     <input type="text" id="extension" name="extension" placeholder="확장자 입력">
 
     <button type="submit">인터프리터 다운로드</button>
   </form>
+  <br />
+  <button id="linkto">테스트 환경으로 가기</button>
 
   <div class="example">
     <h2>예시</h2>
@@ -107,6 +109,28 @@
     </div>
   </div>
 </div>
+
+<script>
+  document.getElementById('linkto').addEventListener('click', function() {
+    const printFunc = document.getElementById('print_func').value;
+    const varCreateFunc = document.getElementById('var_create_func').value;
+    const varGetFunc = document.getElementById('var_get_func').value;
+    const extension = document.getElementById('extension').value;
+
+    if (!printFunc || !varCreateFunc || !varGetFunc || !extension) {
+      alert("모든 필드를 입력해주세요.");
+      return;
+    }
+
+    const query = `${printFunc}|${varCreateFunc}|${varGetFunc}|${extension}`;
+    const base64Query = btoa(unescape(encodeURIComponent(query)));  // <-- 이렇게 수정
+
+    const params = new URLSearchParams({
+      query: base64Query,
+    });
+    window.location.href = `/test?${params.toString()}`;
+  });
+</script>
 
 </body>
 </html>
